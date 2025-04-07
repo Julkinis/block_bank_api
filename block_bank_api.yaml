@@ -1,0 +1,322 @@
+openapi: 3.0.0
+info:
+  title: API блокировки платежей
+  description: API для управления блокировками платежей клиентов т-банка
+  version: 1.0.0
+  
+servers:
+  - url: https://api.t-bank
+
+paths:
+  /clients/{clientId}/payment-blocks:
+    post:
+      summary: Блокировка платежей клиента
+      description: Создает блокировку платежей для указанного клиента
+      tags:
+        - Блокировки
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          description: ID клиента
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentBlockRequest'
+      responses:
+        '201':
+          description: Блокировка успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentBlock'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Клиент не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Клиент уже заблокирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      summary: Получение информации о всех блокировках клиента
+      description: Возвращает информацию о блокировках платежей клиента
+      tags:
+        - Блокировки
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          description: ID клиента
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          description: Необязательный параметр, фильтрует по статусу
+          schema:
+            type: string
+            enum: [active, inactive]
+      responses:
+        '200':
+          description: Успешное получение информации о блокировках
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  blocks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PaymentBlock'
+        '404':
+          description: Клиент не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /clients/{clientId}/payment-blocks/{blockId}:
+    get:
+      summary: Получение детальной информации о блокировке
+      description: Возвращает подробную информацию о конкретной блокировке платежей
+      tags:
+        - Блокировки
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          description: ID клиента
+          schema:
+            type: string
+        - name: blockId
+          in: path
+          required: true
+          description: ID блокировки
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успешное получение информации о блокировке
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentBlock'
+        '404':
+          description: Клиент или блокировка не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      summary: Разблокировка платежей клиента
+      description: Деактивирует блокировку платежей для указанного клиента
+      tags:
+        - Блокировки
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          description: ID клиента
+          schema:
+            type: string
+        - name: blockId
+          in: path
+          required: true
+          description: ID блокировки
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentUnblockRequest'
+      responses:
+        '200':
+          description: Блокировка успешно деактивирована
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentBlock'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Клиент или блокировка не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /clients/{clientId}/payment-status:
+    get:
+      summary: Проверка статуса блокировки платежей клиента
+      description: Возвращает информацию о том, заблокированы ли платежи клиента
+      tags:
+        - Блокировки
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          description: ID клиента
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успешная проверка статуса блокировки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentStatus'
+        '404':
+          description: Клиент не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    PaymentBlockRequest:
+      type: object
+      required:
+        - reason
+        - blockType
+      properties:
+        reason:
+          type: string
+          description: Причина блокировки платежей
+          example: "Подозрение на мошенничество"
+        blockType:
+          type: string
+          description: Тип блокировки
+          enum: [FRAUD_SUSPICION, INVALID_REQUISITES]
+          example: "FRAUD_SUSPICION"
+        comments:
+          type: string
+          description: Комментарии к блокировке
+          example: "Обнаружены подозрительные транзакции"
+        expirationDate:
+          type: string
+          format: date-time
+          description: Дата и время автоматического снятия блокировки (опционально)
+          example: "2025-04-01T15:00:00Z"
+    
+    PaymentUnblockRequest:
+      type: object
+      required:
+        - unblockReason
+      properties:
+        unblockReason:
+          type: string
+          description: Причина разблокировки платежей
+          example: "Клиент предоставил корректные данные"
+        comments:
+          type: string
+          description: Дополнительные комментарии к разблокировке
+          example: "Предоставлены документы, подтверждающе операцию"
+    
+    PaymentBlock:
+      type: object
+      properties:
+        blockId:
+          type: string
+          description: Уникальный ID блокировки
+          example: "b123"
+        clientId:
+          type: string
+          description: ID клиента
+          example: "c123"
+        reason:
+          type: string
+          description: Причина блокировки платежей
+          example: "Подозрение на мошенничество"
+        blockType:
+          type: string
+          description: Тип блокировки
+          enum: [FRAUD_SUSPICION, INVALID_REQUISITES]
+          example: "FRAUD_SUSPICION"
+        status:
+          type: string
+          description: Статус блокировки
+          enum: [active, inactive]
+          example: "active"
+        createdAt:
+          type: string
+          format: date-time
+          description: Дата и время создания блокировки
+          example: "2025-01-01 10:30:00"
+        createdBy:
+          type: string
+          description: ID сотрудника, создавшего блокировку
+          example: "em111"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Дата и время последнего обновления блокировки
+          example: "2025-02-20 10:10:00"
+        updatedBy:
+          type: string
+          description: ID сотрудника, обновившего блокировку
+          example: "e222"
+        expirationDate:
+          type: string
+          format: date-time
+          description: Дата и время автоматического снятия блокировки (если указано)
+          example: "2025-03-03 15:00:00"
+        comments:
+          type: string
+          description: Комментарии к блокировке
+          example: "Обнаружены подозрительные транзакции"
+        unblockReason:
+          type: string
+          description: Причина разблокировки (если блокировка была деактивирована)
+          example: "Клиент предоставил необходимые документы"
+    
+    PaymentStatus:
+      type: object
+      properties:
+        clientId:
+          type: string
+          description: ID клиента
+          example: "с666"
+        blocked:
+          type: boolean
+          description: Флаг, указывающий на наличие активных блокировок
+          example: true
+        activeBlocks:
+          type: array
+          description: Список активных блокировок (если есть)
+          items:
+            $ref: '#/components/schemas/PaymentBlock'
+    
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Код ошибки
+          example: "CLIENT_NOT_FOUND"
+        message:
+          type: string
+          description: Сообщение об ошибке
+          example: "Клиент с указанным ID не найден"
+       
