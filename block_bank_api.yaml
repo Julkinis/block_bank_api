@@ -1,11 +1,11 @@
 openapi: 3.0.0
 info:
   title: API блокировки платежей
-  description: API для управления блокировками платежей клиентов т-банка
+  description: API для управления блокировками платежей клиентов ю-банка
   version: 1.0.0
   
 servers:
-  - url: https://api.t-bank
+  - url: https://api.julkinis.bank
 
 paths:
   /clients/{clientId}/payment-blocks:
